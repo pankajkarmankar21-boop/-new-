@@ -1,0 +1,153 @@
+"use client";
+
+import { useCallback } from "react";
+import { toast } from "sonner";
+
+interface RazorpayPaymentResponse {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+}
+
+interface RazorpayOptions {
+  key: string;
+  amount: number;
+  currency: string;
+  order_id: string;
+  name: string;
+  description: string;
+  prefill: { name: string; contact: string };
+  theme: { color: string };
+  method: { upi: boolean; card: boolean; netbanking: boolean; wallet: boolean };
+  handler: (response: RazorpayPaymentResponse) => void | Promise<void>;
+  modal: { ondismiss: () => void };
+}
+
+interface RazorpayInstance {
+  open: () => void;
+  on: (event: "payment.failed", handler: () => void) => void;
+}
+
+interface RazorpayConstructor {
+  new (options: RazorpayOptions): RazorpayInstance;
+}
+
+declare global {
+  interface Window {
+    Razorpay: RazorpayConstructor;
+  }
+}
+
+function loadRazorpayScript(): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (document.getElementById("razorpay-checkout-js")) return resolve(true);
+    const script = document.createElement("script");
+    script.id = "razorpay-checkout-js";
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+}
+
+interface PayOptions {
+  type: "booking" | "subscription";
+  id: string;
+  farmerName: string;
+  farmerMobile: string;
+  onSuccess: (invoiceNumber: string) => void;
+  onFailure?: () => void;
+}
+
+interface CreateOrderResponse {
+  orderId: string;
+  amount: number;
+  currency: string;
+  keyId: string;
+  error?: string;
+}
+
+interface VerifyPaymentResponse {
+  success: boolean;
+  invoiceNumber: string;
+  paymentId: string;
+  error?: string;
+}
+
+export function useRazorpayCheckout() {
+  const pay = useCallback(async (opts: PayOptions) => {
+    const scriptLoaded = await loadRazorpayScript();
+    if (!scriptLoaded) {
+      toast.error("Payment system लोड करता आले नाही. Internet तपासा.");
+      return;
+    }
+
+    const orderRes = await fetch("/api/razorpay/create-order", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: opts.type, id: opts.id }),
+    });
+    const orderData: CreateOrderResponse = await orderRes.json();
+
+    if (!orderRes.ok) {
+      toast.error(orderData.error || "Payment सुरू करता आले नाही");
+      opts.onFailure?.();
+      return;
+    }
+
+    const razorpay = new window.Razorpay({
+      key: orderData.keyId,
+      amount: orderData.amount,
+      currency: orderData.currency,
+      order_id: orderData.orderId,
+      name: "किसान जुताई",
+      description: opts.type === "booking" ? "सेवा बुकिंग पेमेंट" : "वार्षिक सदस्यता",
+      prefill: {
+        name: opts.farmerName,
+        contact: opts.farmerMobile,
+      },
+      theme: { color: "#16a34a" },
+      method: {
+        upi: true,
+        card: true,
+        netbanking: true,
+        wallet: true,
+      },
+      handler: async (response) => {
+        const verifyRes = await fetch("/api/razorpay/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            razorpay_order_id: response.razorpay_order_id,
+            razorpay_payment_id: response.razorpay_payment_id,
+            razorpay_signature: response.razorpay_signature,
+            method: "upi",
+          }),
+        });
+        const verifyData: VerifyPaymentResponse = await verifyRes.json();
+        if (verifyRes.ok) {
+          toast.success("पेमेंट यशस्वी!");
+          opts.onSuccess(verifyData.invoiceNumber);
+        } else {
+          toast.error(verifyData.error || "पेमेंट पडताळणी अयशस्वी");
+          opts.onFailure?.();
+        }
+      },
+      modal: {
+        ondismiss: () => {
+          toast.info("पेमेंट रद्द केले");
+          opts.onFailure?.();
+        },
+      },
+    });
+
+    razorpay.on("payment.failed", () => {
+      toast.error("पेमेंट अयशस्वी झाले. पुन्हा प्रयत्न करा.");
+      opts.onFailure?.();
+    });
+
+    razorpay.open();
+  }, []);
+
+  return { pay };
+}
