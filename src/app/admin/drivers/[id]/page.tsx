@@ -6,6 +6,8 @@ import { ArrowLeft, Loader2, Check, X, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { formatCurrency, formatDateMarathi } from "@/lib/utils";
+import type { Driver } from "@/types/database";
+import type { AdminDriverJobRef } from "@/types/joined";
 
 export default function AdminDriverDetailPage() {
   const params = useParams();
@@ -14,8 +16,8 @@ export default function AdminDriverDetailPage() {
   const supabase = createClient();
 
   const [loading, setLoading] = useState(true);
-  const [driver, setDriver] = useState<any>(null);
-  const [jobs, setJobs] = useState<any[]>([]);
+  const [driver, setDriver] = useState<Driver | null>(null);
+  const [jobs, setJobs] = useState<AdminDriverJobRef[]>([]);
   const [showRejectBox, setShowRejectBox] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [processing, setProcessing] = useState(false);
@@ -23,7 +25,12 @@ export default function AdminDriverDetailPage() {
   async function load() {
     const [driverRes, jobsRes] = await Promise.all([
       supabase.from("drivers").select("*").eq("id", driverId).single(),
-      supabase.from("bookings").select("id, booking_number, status, final_amount, booking_date").eq("assigned_driver_id", driverId).order("created_at", { ascending: false }).limit(10),
+      supabase
+        .from("bookings")
+        .select("id, booking_number, status, final_amount, booking_date")
+        .eq("assigned_driver_id", driverId)
+        .order("created_at", { ascending: false })
+        .limit(10),
     ]);
     setDriver(driverRes.data);
     setJobs(jobsRes.data || []);
