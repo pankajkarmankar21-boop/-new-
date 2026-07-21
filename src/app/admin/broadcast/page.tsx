@@ -36,8 +36,8 @@ export default function AdminBroadcastPage() {
         // Fan out to every farmer or every driver individually
         const table = targetType === "farmer_specific" ? "farmers" : "drivers";
         const { data: recipients } = await supabase.from(table).select("id");
-        const rows = (recipients || []).map((r: any) => ({
-          target_type: targetType === "farmer_specific" ? "farmer" : "driver",
+        const rows = (recipients || []).map((r) => ({
+          target_type: targetType === "farmer_specific" ? ("farmer" as const) : ("driver" as const),
           recipient_id: r.id,
           title,
           body,
