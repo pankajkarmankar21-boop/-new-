@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -5,6 +6,7 @@ import Link from "next/link";
 import { ArrowLeft, Search, Loader2, ClipboardList } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { formatCurrency, formatDateMarathi } from "@/lib/utils";
+import type { AdminBookingListItem } from "@/types/joined";
 
 const STATUS_LABELS: Record<string, string> = {
   pending: "प्रतीक्षेत", accepted: "स्वीकारले", rejected: "नाकारले", started: "निघाले",
@@ -21,7 +23,7 @@ const PAGE_SIZE = 15;
 export default function AdminBookingsPage() {
   const supabase = createClient();
   const [loading, setLoading] = useState(true);
-  const [bookings, setBookings] = useState<any[]>([]);
+  const [bookings, setBookings] = useState<AdminBookingListItem[]>([]);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
@@ -37,7 +39,7 @@ export default function AdminBookingsPage() {
 
       if (search.trim()) query = query.ilike("booking_number", `%${search.trim()}%`);
 
-      const { data, count } = await query;
+      const { data, count } = await query.returns<AdminBookingListItem[]>();
       setBookings(data || []);
       setTotalCount(count || 0);
       setLoading(false);
