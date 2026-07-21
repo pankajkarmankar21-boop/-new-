@@ -30,16 +30,19 @@ export default function AdminAnalyticsPage() {
     async function load() {
       setLoading(true);
 
-      const [farmersRes, driversRes, farmsRes, itemsRes] = await Promise.all([
-        supabase.from("farmers").select("village"),
-        supabase.from("drivers").select("village"),
-        supabase.from("farms").select("village, area_acre"),
-        supabase
-          .from("booking_items")
-          .select("final_amount, services(name), farms(village), bookings!inner(payment_status)")
-          .eq("bookings.payment_status", "success")
-          .returns<AnalyticsBookingItemRow[]>(),
-      ]);
+      const farmersPromise = supabase.from("farmers").select("village");
+      const driversPromise = supabase.from("drivers").select("village");
+      const farmsPromise = supabase.from("farms").select("village, area_acre");
+      const itemsPromise = supabase
+        .from("booking_items")
+        .select("final_amount, services(name), farms(village), bookings!inner(payment_status)")
+        .eq("bookings.payment_status", "success")
+        .returns<AnalyticsBookingItemRow[]>();
+
+      const farmersRes = await farmersPromise;
+      const driversRes = await driversPromise;
+      const farmsRes = await farmsPromise;
+      const itemsRes = await itemsPromise;
 
       const villageMap: Record<string, VillageStat> = {};
       const ensureVillage = (v: string) => {
