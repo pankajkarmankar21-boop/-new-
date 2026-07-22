@@ -51,7 +51,8 @@ export function NotificationsList({ backHref, themeGradient = "from-primary-600 
         .select("*")
         .or(`recipient_id.eq.${user.id},target_type.eq.all`)
         .order("created_at", { ascending: false })
-        .limit(50);
+        .limit(50)
+        .returns<Notification[]>();
       setNotifications(data || []);
       setLoading(false);
 
