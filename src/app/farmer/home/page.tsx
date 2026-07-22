@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { formatCurrency } from "@/lib/utils";
-import type { Service } from "@/types/database";
+import type { Farmer, FarmerSubscription, Service } from "@/types/database";
 import type { ActiveBookingWithDriver } from "@/types/joined";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -49,10 +49,20 @@ export default function FarmerHomePage() {
       const user = userData.user;
       if (!user) return;
 
-      const { data: farmer } = await supabase.from("farmers").select("full_name").eq("id", user.id).single();
+      const { data: farmer } = await supabase
+        .from("farmers")
+        .select("full_name")
+        .eq("id", user.id)
+        .single()
+        .returns<Pick<Farmer, "full_name">>();
       if (farmer) setFarmerName(farmer.full_name);
 
-      const { data: servicesData } = await supabase.from("services").select("*").eq("is_active", true).order("display_order");
+      const { data: servicesData } = await supabase
+        .from("services")
+        .select("*")
+        .eq("is_active", true)
+        .order("display_order")
+        .returns<Service[]>();
       setServices(servicesData || []);
 
       const { data: subData } = await supabase
@@ -61,7 +71,8 @@ export default function FarmerHomePage() {
         .eq("farmer_id", user.id)
         .eq("is_active", true)
         .gte("end_date", new Date().toISOString().slice(0, 10))
-        .maybeSingle();
+        .maybeSingle()
+        .returns<Pick<FarmerSubscription, "id">>();
       setIsSubscriber(!!subData);
 
       const { data: activeBooking } = await supabase
