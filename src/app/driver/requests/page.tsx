@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { formatCurrency, formatDateMarathi } from "@/lib/utils";
 import { DriverBottomNav } from "@/components/DriverBottomNav";
+import type { Driver, BookingNotificationLog, Booking } from "@/types/database";
 import type { DriverRequestBookingRaw } from "@/types/joined";
 
 interface RequestItem {
@@ -33,14 +34,20 @@ export default function DriverRequestsPage() {
     const user = userData.user;
     if (!user) return;
 
-    const { data: driverData } = await supabase.from("drivers").select("approval_status").eq("id", user.id).single();
+    const { data: driverData } = await supabase
+      .from("drivers")
+      .select("approval_status")
+      .eq("id", user.id)
+      .single()
+      .returns<Pick<Driver, "approval_status">>();
     setApproved(driverData?.approval_status === "approved");
 
     const { data: logs } = await supabase
       .from("booking_notifications_log")
       .select("booking_id, responded")
       .eq("driver_id", user.id)
-      .eq("responded", false);
+      .eq("responded", false)
+      .returns<Pick<BookingNotificationLog, "booking_id" | "responded">[]>();
 
     const bookingIds = (logs || []).map((l) => l.booking_id);
     if (bookingIds.length === 0) {
@@ -94,7 +101,12 @@ export default function DriverRequestsPage() {
     const user = userData.user;
     if (!user) return;
 
-    const { data: current } = await supabase.from("bookings").select("status, assigned_driver_id").eq("id", bookingId).single();
+    const { data: current } = await supabase
+      .from("bookings")
+      .select("status, assigned_driver_id")
+      .eq("id", bookingId)
+      .single()
+      .returns<Pick<Booking, "status" | "assigned_driver_id">>();
     if (current?.status !== "pending" || current?.assigned_driver_id) {
       toast.error("हे बुकिंग दुसऱ्या ड्रायव्हरने आधीच स्वीकारले आहे");
       setProcessingId(null);
