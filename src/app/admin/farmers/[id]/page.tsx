@@ -25,14 +25,15 @@ export default function AdminFarmerDetailPage() {
   const [processing, setProcessing] = useState(false);
 
   async function load() {
-    const farmerPromise = supabase.from("farmers").select("*").eq("id", farmerId).single();
-    const farmsPromise = supabase.from("farms").select("*").eq("farmer_id", farmerId);
+    const farmerPromise = supabase.from("farmers").select("*").eq("id", farmerId).single().returns<Farmer>();
+    const farmsPromise = supabase.from("farms").select("*").eq("farmer_id", farmerId).returns<Farm[]>();
     const bookingsPromise = supabase
       .from("bookings")
       .select("id, booking_number, status, final_amount, booking_date")
       .eq("farmer_id", farmerId)
       .order("created_at", { ascending: false })
-      .limit(10);
+      .limit(10)
+      .returns<AdminFarmerBookingRef[]>();
 
     const farmerRes = await farmerPromise;
     const farmsRes = await farmsPromise;
