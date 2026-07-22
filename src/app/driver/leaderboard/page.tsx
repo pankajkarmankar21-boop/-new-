@@ -5,6 +5,7 @@ import { Trophy, Medal, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { formatCurrency } from "@/lib/utils";
 import { DriverBottomNav } from "@/components/DriverBottomNav";
+import type { Driver } from "@/types/database";
 import type { LeaderboardSnapshotWithDriver } from "@/types/joined";
 
 interface LeaderRow {
@@ -32,7 +33,12 @@ export default function LeaderboardPage() {
       const user = userData.user;
       if (!user) return;
 
-      const { data: driver } = await supabase.from("drivers").select("village").eq("id", user.id).single();
+      const { data: driver } = await supabase
+        .from("drivers")
+        .select("village")
+        .eq("id", user.id)
+        .single()
+        .returns<Pick<Driver, "village">>();
       const village = driver?.village || "";
       setMyVillage(village);
 
