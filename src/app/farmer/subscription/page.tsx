@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { formatCurrency, calculateSubscriptionAmount } from "@/lib/utils";
 import { useRazorpayCheckout } from "@/hooks/useRazorpayCheckout";
-import type { Farm } from "@/types/database";
+import type { Farm, Farmer, FarmerSubscription, FarmerSubscriptionFarm, SubscriptionPlan } from "@/types/database";
 
 const PRICE_PER_ACRE = 550;
 
@@ -37,7 +37,8 @@ export default function SubscriptionPage() {
         .from("farmers")
         .select("full_name, mobile_number")
         .eq("id", user.id)
-        .single();
+        .single()
+        .returns<Pick<Farmer, "full_name" | "mobile_number">>();
       if (farmerData) {
         setFarmerName(farmerData.full_name);
         setFarmerMobile(farmerData.mobile_number);
@@ -47,7 +48,8 @@ export default function SubscriptionPage() {
         .from("farms")
         .select("*")
         .eq("farmer_id", user.id)
-        .order("created_at", { ascending: true });
+        .order("created_at", { ascending: true })
+        .returns<Farm[]>();
       setFarms(farmsData || []);
       setSelectedIds(new Set((farmsData || []).map((f) => f.id)));
 
@@ -57,7 +59,8 @@ export default function SubscriptionPage() {
         .eq("farmer_id", user.id)
         .eq("is_active", true)
         .gte("end_date", new Date().toISOString().slice(0, 10))
-        .maybeSingle();
+        .maybeSingle()
+        .returns<Pick<FarmerSubscription, "id">>();
       setAlreadyActive(!!activeSub);
 
       setLoading(false);
@@ -100,7 +103,8 @@ export default function SubscriptionPage() {
         .from("subscription_plans")
         .select("id")
         .eq("is_active", true)
-        .single();
+        .single()
+        .returns<Pick<SubscriptionPlan, "id">>();
       if (!plan) throw new Error("Subscription plan सापडले नाही");
 
       const endDate = new Date();
@@ -118,7 +122,8 @@ export default function SubscriptionPage() {
           is_active: false,
         })
         .select()
-        .single();
+        .single()
+        .returns<FarmerSubscription>();
       if (subError || !subscription) throw new Error("Subscription तयार करता आले नाही");
 
       const links = selectedFarms.map((f) => ({ subscription_id: subscription.id, farm_id: f.id }));
