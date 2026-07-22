@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react"; 
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Plus, Trash2, Loader2, CalendarDays } from "lucide-react";
@@ -38,18 +38,21 @@ export default function NewBookingPage() {
       const user = userData.user;
       if (!user) return;
 
-      const [farmerRes, farmsRes, servicesRes, subRes] = await Promise.all([
-        supabase.from("farmers").select("full_name, mobile_number").eq("id", user.id).single(),
-        supabase.from("farms").select("*").eq("farmer_id", user.id).order("created_at"),
-        supabase.from("services").select("*").eq("is_active", true).order("display_order"),
-        supabase
-          .from("farmer_subscriptions")
-          .select("id")
-          .eq("farmer_id", user.id)
-          .eq("is_active", true)
-          .gte("end_date", new Date().toISOString().slice(0, 10))
-          .maybeSingle(),
-      ]);
+      const farmerPromise = supabase.from("farmers").select("full_name, mobile_number").eq("id", user.id).single();
+      const farmsPromise = supabase.from("farms").select("*").eq("farmer_id", user.id).order("created_at");
+      const servicesPromise = supabase.from("services").select("*").eq("is_active", true).order("display_order");
+      const subPromise = supabase
+        .from("farmer_subscriptions")
+        .select("id")
+        .eq("farmer_id", user.id)
+        .eq("is_active", true)
+        .gte("end_date", new Date().toISOString().slice(0, 10))
+        .maybeSingle();
+
+      const farmerRes = await farmerPromise;
+      const farmsRes = await farmsPromise;
+      const servicesRes = await servicesPromise;
+      const subRes = await subPromise;
 
       if (farmerRes.data) {
         setFarmerName(farmerRes.data.full_name);
