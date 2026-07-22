@@ -23,13 +23,14 @@ export default function AdminDriverDetailPage() {
   const [processing, setProcessing] = useState(false);
 
   async function load() {
-    const driverPromise = supabase.from("drivers").select("*").eq("id", driverId).single();
+    const driverPromise = supabase.from("drivers").select("*").eq("id", driverId).single().returns<Driver>();
     const jobsPromise = supabase
       .from("bookings")
       .select("id, booking_number, status, final_amount, booking_date")
       .eq("assigned_driver_id", driverId)
       .order("created_at", { ascending: false })
-      .limit(10);
+      .limit(10)
+      .returns<AdminDriverJobRef[]>();
 
     const driverRes = await driverPromise;
     const jobsRes = await jobsPromise;
