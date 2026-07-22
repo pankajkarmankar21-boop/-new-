@@ -6,15 +6,7 @@ import { ArrowLeft, Send, ImageIcon, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { uploadDocument } from "@/lib/upload";
-
-interface ChatMessage {
-  id: string;
-  booking_id: string;
-  sender_id: string;
-  message: string | null;
-  image_url: string | null;
-  created_at: string;
-}
+import type { ChatMessage } from "@/types/database";
 
 interface ChatWindowProps {
   bookingId: string;
@@ -46,7 +38,8 @@ export function ChatWindow({ bookingId, otherPartyName, otherPartyRole, backHref
         .from("chat_messages")
         .select("*")
         .eq("booking_id", bookingId)
-        .order("created_at", { ascending: true });
+        .order("created_at", { ascending: true })
+        .returns<ChatMessage[]>();
       setMessages(data || []);
       setLoading(false);
 
