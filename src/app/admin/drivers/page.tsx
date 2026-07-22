@@ -25,7 +25,7 @@ export default function AdminDriversPage() {
       let query = supabase.from("drivers").select("*").order("created_at", { ascending: false }).limit(100);
       if (statusFilter !== "all") query = query.eq("approval_status", statusFilter);
       if (search.trim()) query = query.or(`full_name.ilike.%${search.trim()}%,mobile_number.ilike.%${search.trim()}%,village.ilike.%${search.trim()}%`);
-      const { data } = await query;
+      const { data } = await query.returns<Driver[]>();
       setDrivers(data || []);
       setLoading(false);
     }
