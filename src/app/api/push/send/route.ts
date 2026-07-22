@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import webpush from "web-push";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
+import type { Profile, PushSubscription } from "@/types/database";
 
 webpush.setVapidDetails(
   `mailto:${process.env.VAPID_CONTACT_EMAIL || "support@kisan-jutai.app"}`,
@@ -26,7 +27,12 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Login आवश्यक आहे" }, { status: 401 });
 
   // Only admins (or the internal system, via service role callers) can trigger sends
-  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single()
+    .returns<Pick<Profile, "role">>();
   if (profile?.role !== "admin") {
     return NextResponse.json({ error: "अनधिकृत" }, { status: 403 });
   }
@@ -37,7 +43,11 @@ export async function POST(req: NextRequest) {
   }
 
   const admin = createAdminClient();
-  const { data: subscriptions } = await admin.from("push_subscriptions").select("*").eq("user_id", userId);
+  const { data: subscriptions } = await admin
+    .from("push_subscriptions")
+    .select("*")
+    .eq("user_id", userId)
+    .returns<PushSubscription[]>();
 
   const subscriptionList = subscriptions || [];
 
