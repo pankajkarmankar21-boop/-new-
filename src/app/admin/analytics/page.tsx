@@ -9,6 +9,7 @@ import autoTable from "jspdf-autotable";
 import { createClient } from "@/lib/supabase/client";
 import { formatCurrency } from "@/lib/utils";
 import { AdminBottomNav } from "@/components/AdminBottomNav";
+import type { Farmer, Driver, Farm } from "@/types/database";
 import type { AnalyticsBookingItemRow } from "@/types/joined";
 
 interface JsPDFWithAutoTable extends jsPDF {
@@ -30,9 +31,9 @@ export default function AdminAnalyticsPage() {
     async function load() {
       setLoading(true);
 
-      const farmersPromise = supabase.from("farmers").select("village");
-      const driversPromise = supabase.from("drivers").select("village");
-      const farmsPromise = supabase.from("farms").select("village, area_acre");
+      const farmersPromise = supabase.from("farmers").select("village").returns<Pick<Farmer, "village">[]>();
+      const driversPromise = supabase.from("drivers").select("village").returns<Pick<Driver, "village">[]>();
+      const farmsPromise = supabase.from("farms").select("village, area_acre").returns<Pick<Farm, "village" | "area_acre">[]>();
       const itemsPromise = supabase
         .from("booking_items")
         .select("final_amount, services(name), farms(village), bookings!inner(payment_status)")
