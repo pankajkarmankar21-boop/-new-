@@ -7,6 +7,7 @@ import { ArrowLeft, Phone, ShieldCheck, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { isValidMobile } from "@/lib/utils";
+import type { Profile } from "@/types/database";
 import Link from "next/link";
 
 type Step = "mobile" | "otp";
@@ -75,7 +76,8 @@ export default function DriverLoginPage() {
       .from("profiles")
       .select("id, is_registered")
       .eq("id", data.user.id)
-      .maybeSingle();
+      .maybeSingle()
+      .returns<Pick<Profile, "id" | "is_registered">>();
 
     if (!existingProfile) {
       await supabase.from("profiles").insert({
