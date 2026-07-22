@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { formatCurrency } from "@/lib/utils";
 import { useRazorpayCheckout } from "@/hooks/useRazorpayCheckout";
-import type { Farm, Service } from "@/types/database";
+import type { Booking, Farm, Farmer, FarmerSubscription, Service } from "@/types/database";
 
 interface BookingLine {
   id: string;
@@ -38,16 +38,22 @@ export default function NewBookingPage() {
       const user = userData.user;
       if (!user) return;
 
-      const farmerPromise = supabase.from("farmers").select("full_name, mobile_number").eq("id", user.id).single();
-      const farmsPromise = supabase.from("farms").select("*").eq("farmer_id", user.id).order("created_at");
-      const servicesPromise = supabase.from("services").select("*").eq("is_active", true).order("display_order");
+      const farmerPromise = supabase
+        .from("farmers")
+        .select("full_name, mobile_number")
+        .eq("id", user.id)
+        .single()
+        .returns<Pick<Farmer, "full_name" | "mobile_number">>();
+      const farmsPromise = supabase.from("farms").select("*").eq("farmer_id", user.id).order("created_at").returns<Farm[]>();
+      const servicesPromise = supabase.from("services").select("*").eq("is_active", true).order("display_order").returns<Service[]>();
       const subPromise = supabase
         .from("farmer_subscriptions")
         .select("id")
         .eq("farmer_id", user.id)
         .eq("is_active", true)
         .gte("end_date", new Date().toISOString().slice(0, 10))
-        .maybeSingle();
+        .maybeSingle()
+        .returns<Pick<FarmerSubscription, "id">>();
 
       const farmerRes = await farmerPromise;
       const farmsRes = await farmsPromise;
@@ -144,7 +150,8 @@ export default function NewBookingPage() {
           payment_status: "pending",
         })
         .select()
-        .single();
+        .single()
+        .returns<Booking>();
 
       if (bookingError || !booking) throw new Error("बुकिंग तयार करता आले नाही");
 
