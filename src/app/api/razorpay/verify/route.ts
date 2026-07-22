@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { verifyRazorpaySignature } from "@/lib/razorpay";
+import type { Payment } from "@/types/database";
 
 export async function POST(req: NextRequest) {
   const supabase = createClient();
@@ -39,7 +40,8 @@ export async function POST(req: NextRequest) {
     .select("*")
     .eq("razorpay_order_id", razorpay_order_id)
     .eq("farmer_id", user.id)
-    .single();
+    .single()
+    .returns<Payment>();
 
   if (paymentFetchError || !payment) {
     return NextResponse.json({ error: "Payment record सापडला नाही" }, { status: 404 });
