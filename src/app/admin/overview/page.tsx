@@ -25,18 +25,23 @@ export default function AdminOverviewPage() {
 
   useEffect(() => {
     async function load() {
-      const [farmersCount, driversCount, bookingsCount, payments, pendingFarmers, pendingDrivers] = await Promise.all([
-        supabase.from("farmers").select("*", { count: "exact", head: true }),
-        supabase.from("drivers").select("*", { count: "exact", head: true }),
-        supabase.from("bookings").select("*", { count: "exact", head: true }),
-        supabase
-          .from("payments")
-          .select("amount, subscription_id, booking_id, bookings(farmers(village))")
-          .eq("status", "success")
-          .returns<AdminRevenuePaymentRef[]>(),
-        supabase.from("farmers").select("*", { count: "exact", head: true }).eq("approval_status", "pending"),
-        supabase.from("drivers").select("*", { count: "exact", head: true }).eq("approval_status", "pending"),
-      ]);
+      const farmersCountPromise = supabase.from("farmers").select("*", { count: "exact", head: true });
+      const driversCountPromise = supabase.from("drivers").select("*", { count: "exact", head: true });
+      const bookingsCountPromise = supabase.from("bookings").select("*", { count: "exact", head: true });
+      const paymentsPromise = supabase
+        .from("payments")
+        .select("amount, subscription_id, booking_id, bookings(farmers(village))")
+        .eq("status", "success")
+        .returns<AdminRevenuePaymentRef[]>();
+      const pendingFarmersPromise = supabase.from("farmers").select("*", { count: "exact", head: true }).eq("approval_status", "pending");
+      const pendingDriversPromise = supabase.from("drivers").select("*", { count: "exact", head: true }).eq("approval_status", "pending");
+
+      const farmersCount = await farmersCountPromise;
+      const driversCount = await driversCountPromise;
+      const bookingsCount = await bookingsCountPromise;
+      const payments = await paymentsPromise;
+      const pendingFarmers = await pendingFarmersPromise;
+      const pendingDrivers = await pendingDriversPromise;
 
       const paymentRows = payments.data || [];
       const subscriptionRevenue = paymentRows.filter((p) => p.subscription_id).reduce((s, p) => s + Number(p.amount), 0);
