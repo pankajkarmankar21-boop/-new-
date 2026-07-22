@@ -123,7 +123,12 @@ export default function DriverJobDetailPage() {
     }
 
     setUpdating(true);
-    const { data: current } = await supabase.from("bookings").select("completion_otp").eq("id", bookingId).single();
+    const { data: current } = await supabase
+      .from("bookings")
+      .select("completion_otp")
+      .eq("id", bookingId)
+      .single()
+      .returns<{ completion_otp: string | null }>();
 
     if (current?.completion_otp !== otpInput) {
       toast.error("चुकीचा OTP. शेतकऱ्याकडून पुन्हा विचारा.");
