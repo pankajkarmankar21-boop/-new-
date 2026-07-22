@@ -24,7 +24,7 @@ export default function DriverProfilePage() {
       const { data: userData } = await supabase.auth.getUser();
       const user = userData.user;
       if (!user) return;
-      const { data } = await supabase.from("drivers").select("*").eq("id", user.id).single();
+      const { data } = await supabase.from("drivers").select("*").eq("id", user.id).single().returns<Driver>();
       setDriver(data);
       setAddress(data?.address || "");
       setVillage(data?.village || "");
