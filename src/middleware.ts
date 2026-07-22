@@ -1,10 +1,11 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import type { Database, Profile } from "@/types/database";
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request: { headers: request.headers } });
 
-  const supabase = createServerClient(
+  const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -52,7 +53,8 @@ export async function middleware(request: NextRequest) {
       .from("profiles")
       .select("role, is_registered")
       .eq("id", user.id)
-      .single();
+      .single()
+      .returns<Pick<Profile, "role" | "is_registered">>();
 
     if (isFarmerApp && profile?.role !== "farmer") {
       return NextResponse.redirect(new URL("/", request.url));
