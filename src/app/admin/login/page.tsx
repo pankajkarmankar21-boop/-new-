@@ -7,6 +7,7 @@ import { ArrowLeft, ShieldCheck, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { isValidMobile } from "@/lib/utils";
+import type { Profile } from "@/types/database";
 import Link from "next/link";
 
 type Step = "mobile" | "otp";
@@ -63,7 +64,12 @@ export default function AdminLoginPage() {
       return;
     }
 
-    const { data: profile } = await supabase.from("profiles").select("role").eq("id", data.user.id).maybeSingle();
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", data.user.id)
+      .maybeSingle()
+      .returns<Pick<Profile, "role">>();
 
     if (profile?.role !== "admin") {
       await supabase.auth.signOut();
