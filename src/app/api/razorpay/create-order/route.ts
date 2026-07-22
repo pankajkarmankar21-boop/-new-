@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getRazorpayInstance } from "@/lib/razorpay";
+import type { Booking, FarmerSubscription } from "@/types/database";
 
 /**
  * Creates a Razorpay order. The amount is NEVER trusted from the client —
@@ -34,7 +35,8 @@ export async function POST(req: NextRequest) {
       .select("id, final_amount, farmer_id, booking_number, payment_status")
       .eq("id", id)
       .eq("farmer_id", user.id)
-      .single();
+      .single()
+      .returns<Pick<Booking, "id" | "final_amount" | "farmer_id" | "booking_number" | "payment_status">>();
 
     if (error || !booking) {
       return NextResponse.json({ error: "बुकिंग सापडली नाही" }, { status: 404 });
@@ -50,7 +52,8 @@ export async function POST(req: NextRequest) {
       .select("id, amount, farmer_id, is_active")
       .eq("id", id)
       .eq("farmer_id", user.id)
-      .single();
+      .single()
+      .returns<Pick<FarmerSubscription, "id" | "amount" | "farmer_id" | "is_active">>();
 
     if (error || !subscription) {
       return NextResponse.json({ error: "Subscription सापडले नाही" }, { status: 404 });
