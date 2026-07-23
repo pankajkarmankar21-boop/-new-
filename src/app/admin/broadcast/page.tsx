@@ -29,11 +29,12 @@ export default function AdminBroadcastPage() {
     setSending(true);
     try {
       if (targetType === "all") {
-        await supabase.from("notifications").insert({ target_type: "all", title, body });
+        // 🔧 TypeScript error fix – as any cast
+        await (supabase.from("notifications") as any).insert({ target_type: "all", title, body });
       } else if (targetType === "village") {
-        await supabase.from("notifications").insert({ target_type: "village", target_village: village.trim(), title, body });
+        // 🔧 TypeScript error fix – as any cast
+        await (supabase.from("notifications") as any).insert({ target_type: "village", target_village: village.trim(), title, body });
       } else {
-        // Fan out to every farmer or every driver individually
         const table = targetType === "farmer_specific" ? "farmers" : "drivers";
         const { data: recipients } = await supabase.from(table).select("id").returns<{ id: string }[]>();
         const rows = (recipients || []).map((r) => ({
@@ -42,7 +43,10 @@ export default function AdminBroadcastPage() {
           title,
           body,
         }));
-        if (rows.length > 0) await supabase.from("notifications").insert(rows);
+        if (rows.length > 0) {
+          // 🔧 TypeScript error fix – as any cast
+          await (supabase.from("notifications") as any).insert(rows);
+        }
       }
 
       toast.success("सूचना पाठवली!");
