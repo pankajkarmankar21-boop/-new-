@@ -2,12 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getRazorpayInstance } from "@/lib/razorpay";
 
-/**
- * Creates a Razorpay order. The amount is NEVER trusted from the client —
- * it is always re-fetched from the database (bookings.final_amount or
- * farmer_subscriptions.amount) using the authenticated user's own row,
- * which RLS guarantees belongs to them.
- */
 export async function POST(req: NextRequest) {
   const supabase = createClient();
   const {
@@ -65,14 +59,13 @@ export async function POST(req: NextRequest) {
   try {
     const razorpay = getRazorpayInstance();
     const order = await razorpay.orders.create({
-      amount: Math.round(amount * 100), // paise
+      amount: Math.round(amount * 100),
       currency: "INR",
       receipt,
       notes: { type, referenceId: id, farmerId: user.id },
     });
 
-    // Create a pending payment row to track this attempt
-    await supabase.from("payments").insert({
+    await (supabase.from("payments") as any).insert({
       farmer_id: user.id,
       booking_id: type === "booking" ? id : null,
       subscription_id: type === "subscription" ? id : null,
