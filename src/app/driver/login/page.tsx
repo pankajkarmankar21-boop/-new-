@@ -79,13 +79,14 @@ export default function DriverLoginPage() {
       .maybeSingle()
       .returns<Pick<Profile, "id" | "is_registered">>();
 
+    // FIXED CODE - "as any" added here
     if (!existingProfile) {
       await supabase.from("profiles").insert({
         id: data.user.id,
         role: "driver",
         mobile_number: mobile,
         is_registered: false,
-      });
+      } as any);
     }
 
     setLoading(false);
