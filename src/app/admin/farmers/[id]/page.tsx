@@ -48,7 +48,7 @@ export default function AdminFarmerDetailPage() {
 
   async function handleApprove() {
     setProcessing(true);
-    const { error } = await (supabase.from("farmers") as any).update({ approval_status: "approved", rejection_reason: null }).eq("id", farmerId);
+    const { error } = await supabase.from("farmers").update({ approval_status: "approved", rejection_reason: null }).eq("id", farmerId);
     setProcessing(false);
     if (error) toast.error("मंजूर करता आले नाही");
     else { toast.success("शेतकरी मंजूर केला"); load(); }
@@ -57,7 +57,7 @@ export default function AdminFarmerDetailPage() {
   async function handleReject() {
     if (!rejectReason.trim()) { toast.error("कारण लिहा"); return; }
     setProcessing(true);
-    const { error } = await (supabase.from("farmers") as any).update({ approval_status: "rejected", rejection_reason: rejectReason }).eq("id", farmerId);
+    const { error } = await supabase.from("farmers").update({ approval_status: "rejected", rejection_reason: rejectReason }).eq("id", farmerId);
     setProcessing(false);
     if (error) toast.error("नाकारता आले नाही");
     else { toast.success("नाकारले"); setShowRejectBox(false); load(); }
