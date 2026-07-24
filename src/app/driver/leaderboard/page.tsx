@@ -5,6 +5,8 @@ import { Trophy, Medal, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { formatCurrency } from "@/lib/utils";
 import { DriverBottomNav } from "@/components/DriverBottomNav";
+import type { Driver } from "@/types/database";
+import type { LeaderboardSnapshotWithDriver } from "@/types/joined";
 
 interface LeaderRow {
   driver_id: string;
@@ -35,8 +37,9 @@ export default function LeaderboardPage() {
         .from("drivers")
         .select("village")
         .eq("id", user.id)
-        .single();
-      const village = (driver as any)?.village || "";
+        .single()
+        .returns<Pick<Driver, "village">>();
+      const village = driver?.village || "";
       setMyVillage(village);
 
       const now = new Date();
@@ -50,9 +53,10 @@ export default function LeaderboardPage() {
         .eq("period_type", period)
         .eq("period_key", periodKey)
         .eq("village", village)
-        .order("rank", { ascending: true });
+        .order("rank", { ascending: true })
+        .returns<LeaderboardSnapshotWithDriver[]>();
 
-      const mapped: LeaderRow[] = ((snapshots as any[]) || []).map((s: any) => ({
+      const mapped: LeaderRow[] = (snapshots || []).map((s) => ({
         driver_id: s.driver_id,
         driver_name: s.drivers?.full_name || "",
         village: s.village,
