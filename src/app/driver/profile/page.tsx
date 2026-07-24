@@ -7,7 +7,26 @@ import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { DriverBottomNav } from "@/components/DriverBottomNav";
 import Link from "next/link";
-import type { Driver } from "@/types/database";
+
+// FIXED: Driver type ko yahin define karo
+type Driver = {
+  id: string;
+  full_name: string;
+  mobile_number: string;
+  address: string;
+  village: string;
+  tractor_brand: string;
+  tractor_company: string;
+  rating: number;
+  approval_status: 'pending' | 'approved' | 'rejected';
+  rc_book_url?: string;
+  driving_licence_url?: string;
+  aadhar_front_url?: string;
+  aadhar_back_url?: string;
+  tractor_photo_url?: string;
+  created_at?: string;
+  updated_at?: string;
+};
 
 export default function DriverProfilePage() {
   const supabase = createClient();
@@ -15,7 +34,7 @@ export default function DriverProfilePage() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [driver, setDriver] = useState<any>(null); // ← FIXED: any use kiya
+  const [driver, setDriver] = useState<Driver | null>(null);
   const [address, setAddress] = useState("");
   const [village, setVillage] = useState("");
 
@@ -28,16 +47,24 @@ export default function DriverProfilePage() {
         return;
       }
       
-      // FIXED: "as any" add kiya
-      const { data } = await supabase
+      // FIXED: Direct query without .returns()
+      const { data, error } = await supabase
         .from("drivers")
         .select("*")
         .eq("id", user.id)
-        .single() as any; // ← YEH IMPORTANT HAI
+        .single();
       
-      setDriver(data);
-      setAddress(data?.address || "");
-      setVillage(data?.village || "");
+      if (error) {
+        console.error("Error loading driver:", error);
+        setLoading(false);
+        return;
+      }
+      
+      // FIXED: Type assertion with 'as Driver'
+      const driverData = data as Driver;
+      setDriver(driverData);
+      setAddress(driverData?.address || "");
+      setVillage(driverData?.village || "");
       setLoading(false);
     }
     load();
@@ -47,10 +74,15 @@ export default function DriverProfilePage() {
     if (!driver) return;
     setSaving(true);
     
-    // FIXED: "as any" add kiya
+    // FIXED: Proper type assertion
+    const updateData = {
+      address: address,
+      village: village
+    };
+    
     const { error } = await supabase
       .from("drivers")
-      .update({ address, village } as any) // ← YEH BHI
+      .update(updateData)
       .eq("id", driver.id);
       
     setSaving(false);
