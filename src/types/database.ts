@@ -988,11 +988,11 @@ export interface Database {
 
     Functions: {
       auth_role: {
-        Args: {};
+        Args: Record<string, never>;
         Returns: "farmer" | "driver" | "admin";
       };
       is_admin: {
-        Args: {};
+        Args: Record<string, never>;
         Returns: boolean;
       };
       notify_nearby_drivers: {
