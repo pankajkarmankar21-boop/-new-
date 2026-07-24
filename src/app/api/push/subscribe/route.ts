@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "अपुरी माहिती" }, { status: 400 });
   }
 
-  const { error } = await (supabase.from("push_subscriptions") as any).upsert(
+  const { error } = await supabase.from("push_subscriptions").upsert(
     {
       user_id: user.id,
       endpoint,
