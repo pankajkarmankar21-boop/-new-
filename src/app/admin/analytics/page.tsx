@@ -50,9 +50,9 @@ export default function AdminAnalyticsPage() {
         if (!villageMap[v]) villageMap[v] = { village: v, farmers: 0, drivers: 0, totalAcre: 0, revenue: 0 };
         return villageMap[v];
       };
-      (farmersRes.data || []).forEach((f) => { ensureVillage(f.village).farmers++; });
-      (driversRes.data || []).forEach((d) => { ensureVillage(d.village).drivers++; });
-      (farmsRes.data || []).forEach((f) => { ensureVillage(f.village).totalAcre += Number(f.area_acre); });
+      (farmersRes.data || []).forEach((f: any) => { ensureVillage(f.village).farmers++; });
+(driversRes.data || []).forEach((d: any) => { ensureVillage(d.village).drivers++; });
+(farmsRes.data || []).forEach((f: any) => { ensureVillage(f.village).totalAcre += Number(f.area_acre); });
 
       const serviceMap: Record<string, ServiceStat> = {};
       (itemsRes.data || []).forEach((item) => {
