@@ -5,7 +5,6 @@ import { useParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { ChatWindow } from "@/components/ChatWindow";
-import type { DriverChatBookingRef } from "@/types/joined";
 
 export default function DriverChatPage() {
   const params = useParams();
@@ -20,9 +19,8 @@ export default function DriverChatPage() {
         .from("bookings")
         .select("farmers(full_name)")
         .eq("id", bookingId)
-        .single()
-        .returns<DriverChatBookingRef>();
-      if (data?.farmers?.full_name) setFarmerName(data.farmers.full_name);
+        .single();
+      if ((data as any)?.farmers?.full_name) setFarmerName((data as any).farmers.full_name);
       setLoading(false);
     }
     load();
