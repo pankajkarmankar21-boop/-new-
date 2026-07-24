@@ -10,7 +10,6 @@ import { createClient } from "@/lib/supabase/client";
 import { formatCurrency, formatDateMarathi, generateCompletionOtp } from "@/lib/utils";
 import { uploadDocument } from "@/lib/upload";
 import type { BookingStatus } from "@/types/database";
-import type { DriverJobBookingDetail, DriverJobBookingItem } from "@/types/joined";
 
 const STEPS: { status: BookingStatus; label: string }[] = [
   { status: "accepted", label: "स्वीकारले" },
@@ -28,8 +27,8 @@ export default function DriverJobDetailPage() {
 
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
-  const [booking, setBooking] = useState<DriverJobBookingDetail | null>(null);
-  const [items, setItems] = useState<DriverJobBookingItem[]>([]);
+  const [booking, setBooking] = useState<any>(null);
+  const [items, setItems] = useState<any[]>([]);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [otpInput, setOtpInput] = useState("");
   const [photos, setPhotos] = useState<string[]>([]);
@@ -40,22 +39,19 @@ export default function DriverJobDetailPage() {
       .from("bookings")
       .select("*, farmers(full_name, mobile_number, village, address)")
       .eq("id", bookingId)
-      .single()
-      .returns<DriverJobBookingDetail>();
+      .single();
     setBooking(data);
 
     const { data: itemsData } = await supabase
       .from("booking_items")
       .select("*, farms(village, survey_number), services(name)")
-      .eq("booking_id", bookingId)
-      .returns<DriverJobBookingItem[]>();
+      .eq("booking_id", bookingId);
     setItems(itemsData || []);
     setLoading(false);
   }
 
   useEffect(() => {
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookingId]);
 
   const currentStepIndex = STEPS.findIndex((s) => s.status === booking?.status);
@@ -63,17 +59,16 @@ export default function DriverJobDetailPage() {
   async function advanceStatus(nextStatus: BookingStatus) {
     if (!booking) return;
     if (nextStatus === "completed") {
-      // Generate OTP and notify farmer instead of jumping straight to completed
       const otp = generateCompletionOtp();
-      const { error } = await supabase
-        .from("bookings")
+      const { error } = await (supabase
+        .from("bookings") as any)
         .update({ completion_otp: otp })
         .eq("id", bookingId);
       if (error) {
         toast.error("OTP तयार करता आले नाही");
         return;
       }
-      await supabase.from("notifications").insert({
+      await (supabase.from("notifications") as any).insert({
         target_type: "farmer",
         recipient_id: booking.farmer_id,
         title: "काम पूर्ण करण्यासाठी OTP",
@@ -85,7 +80,7 @@ export default function DriverJobDetailPage() {
     }
 
     setUpdating(true);
-    const { error } = await supabase.from("bookings").update({ status: nextStatus }).eq("id", bookingId);
+    const { error } = await (supabase.from("bookings") as any).update({ status: nextStatus }).eq("id", bookingId);
     setUpdating(false);
     if (error) {
       toast.error("स्थिती अपडेट करता आले नाही");
@@ -127,17 +122,16 @@ export default function DriverJobDetailPage() {
       .from("bookings")
       .select("completion_otp")
       .eq("id", bookingId)
-      .single()
-      .returns<{ completion_otp: string | null }>();
+      .single();
 
-    if (current?.completion_otp !== otpInput) {
+    if ((current as any)?.completion_otp !== otpInput) {
       toast.error("चुकीचा OTP. शेतकऱ्याकडून पुन्हा विचारा.");
       setUpdating(false);
       return;
     }
 
-    const { error: updateError } = await supabase
-      .from("bookings")
+    const { error: updateError } = await (supabase
+      .from("bookings") as any)
       .update({ status: "completed", completion_otp_verified: true })
       .eq("id", bookingId);
 
@@ -148,7 +142,7 @@ export default function DriverJobDetailPage() {
     }
 
     const photoRows = photos.map((url) => ({ booking_id: bookingId, photo_url: url }));
-    await supabase.from("booking_completion_photos").insert(photoRows);
+    await (supabase.from("booking_completion_photos") as any).insert(photoRows);
 
     toast.success("काम यशस्वीरित्या पूर्ण झाले!");
     setUpdating(false);
@@ -176,7 +170,6 @@ export default function DriverJobDetailPage() {
           <h1 className="text-xl font-bold text-gray-900">{booking.booking_number}</h1>
         </div>
 
-        {/* Status stepper */}
         {booking.status !== "rejected" && booking.status !== "cancelled" && (
           <div className="glass-card mb-5 p-5">
             <div className="flex items-center justify-between">
@@ -196,7 +189,6 @@ export default function DriverJobDetailPage() {
           </div>
         )}
 
-        {/* Farmer info */}
         <div className="glass-card mb-5 p-5">
           <h2 className="mb-3 text-sm font-bold text-gray-700">शेतकरी तपशील</h2>
           <p className="text-base font-bold text-gray-900">{farmer?.full_name}</p>
@@ -211,11 +203,10 @@ export default function DriverJobDetailPage() {
           </div>
         </div>
 
-        {/* Work items */}
         <div className="glass-card mb-5 p-5">
           <h2 className="mb-3 text-sm font-bold text-gray-700">कामाचे तपशील</h2>
           <div className="flex flex-col gap-2">
-            {items.map((item) => (
+            {items.map((item: any) => (
               <div key={item.id} className="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2 text-sm">
                 <span>{item.services?.name} · {item.farms?.village} (सर्वे {item.farms?.survey_number})</span>
                 <span className="font-semibold">{item.area_acre} एकर</span>
@@ -228,7 +219,6 @@ export default function DriverJobDetailPage() {
           </div>
         </div>
 
-        {/* Action button */}
         {currentStepIndex >= 0 && currentStepIndex < STEPS.length - 1 && (
           <button
             onClick={() => advanceStatus(STEPS[currentStepIndex + 1].status)}
@@ -246,7 +236,6 @@ export default function DriverJobDetailPage() {
         )}
       </div>
 
-      {/* Completion modal: mandatory OTP + photos */}
       {showCompleteModal && (
         <div className="fixed inset-0 z-50 flex items-end bg-black/50">
           <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} className="max-h-[85vh] w-full overflow-y-auto rounded-t-3xl bg-white p-6">
