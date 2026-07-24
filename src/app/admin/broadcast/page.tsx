@@ -29,22 +29,19 @@ export default function AdminBroadcastPage() {
     setSending(true);
     try {
       if (targetType === "all") {
-        // 🔧 TypeScript error fix – as any cast
         await (supabase.from("notifications") as any).insert({ target_type: "all", title, body });
       } else if (targetType === "village") {
-        // 🔧 TypeScript error fix – as any cast
         await (supabase.from("notifications") as any).insert({ target_type: "village", target_village: village.trim(), title, body });
       } else {
         const table = targetType === "farmer_specific" ? "farmers" : "drivers";
-        const { data: recipients } = await supabase.from(table).select("id").returns<{ id: string }[]>();
-        const rows = (recipients || []).map((r) => ({
+        const { data: recipients } = await supabase.from(table).select("id");
+        const rows = ((recipients as any[]) || []).map((r: any) => ({
           target_type: targetType === "farmer_specific" ? ("farmer" as const) : ("driver" as const),
           recipient_id: r.id,
           title,
           body,
         }));
         if (rows.length > 0) {
-          // 🔧 TypeScript error fix – as any cast
           await (supabase.from("notifications") as any).insert(rows);
         }
       }
