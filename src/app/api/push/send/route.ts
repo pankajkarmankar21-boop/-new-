@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import webpush from "web-push";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
-import type { Profile, PushSubscription } from "@/types/database";
 
 webpush.setVapidDetails(
   `mailto:${process.env.VAPID_CONTACT_EMAIL || "support@kisan-jutai.app"}`,
@@ -31,9 +30,8 @@ export async function POST(req: NextRequest) {
     .from("profiles")
     .select("role")
     .eq("id", user.id)
-    .single()
-    .returns<Pick<Profile, "role">>();
-  if (profile?.role !== "admin") {
+    .single();
+  if ((profile as any)?.role !== "admin") {
     return NextResponse.json({ error: "अनधिकृत" }, { status: 403 });
   }
 
@@ -46,13 +44,12 @@ export async function POST(req: NextRequest) {
   const { data: subscriptions } = await admin
     .from("push_subscriptions")
     .select("*")
-    .eq("user_id", userId)
-    .returns<PushSubscription[]>();
+    .eq("user_id", userId);
 
-  const subscriptionList = subscriptions || [];
+  const subscriptionList = (subscriptions as any[]) || [];
 
   const results = await Promise.allSettled(
-    subscriptionList.map((sub) =>
+    subscriptionList.map((sub: any) =>
       webpush.sendNotification(
         { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
         JSON.stringify({ title, body, data: { url: url || "/" } })
@@ -61,8 +58,8 @@ export async function POST(req: NextRequest) {
   );
 
   const failedEndpoints = subscriptionList
-    .filter((_, i) => results[i].status === "rejected")
-    .map((s) => s.endpoint);
+    .filter((_: any, i: number) => results[i].status === "rejected")
+    .map((s: any) => s.endpoint);
 
   // Clean up subscriptions that are no longer valid (e.g. user uninstalled the app)
   if (failedEndpoints.length > 0) {
