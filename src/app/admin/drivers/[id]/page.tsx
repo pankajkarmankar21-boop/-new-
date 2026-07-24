@@ -6,8 +6,6 @@ import { ArrowLeft, Loader2, Check, X, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { formatCurrency, formatDateMarathi } from "@/lib/utils";
-import type { Driver } from "@/types/database";
-import type { AdminDriverJobRef } from "@/types/joined";
 
 export default function AdminDriverDetailPage() {
   const params = useParams();
@@ -16,24 +14,21 @@ export default function AdminDriverDetailPage() {
   const supabase = createClient();
 
   const [loading, setLoading] = useState(true);
-  const [driver, setDriver] = useState<Driver | null>(null);
-  const [jobs, setJobs] = useState<AdminDriverJobRef[]>([]);
+  const [driver, setDriver] = useState<any>(null);
+  const [jobs, setJobs] = useState<any[]>([]);
   const [showRejectBox, setShowRejectBox] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [processing, setProcessing] = useState(false);
 
   async function load() {
-    const driverPromise = supabase.from("drivers").select("*").eq("id", driverId).single().returns<Driver>();
-    const jobsPromise = supabase
+    const driverRes = await supabase.from("drivers").select("*").eq("id", driverId).single();
+    const jobsRes = await supabase
       .from("bookings")
       .select("id, booking_number, status, final_amount, booking_date")
       .eq("assigned_driver_id", driverId)
       .order("created_at", { ascending: false })
-      .limit(10)
-      .returns<AdminDriverJobRef[]>();
+      .limit(10);
 
-    const driverRes = await driverPromise;
-    const jobsRes = await jobsPromise;
     setDriver(driverRes.data);
     setJobs(jobsRes.data || []);
     setLoading(false);
@@ -43,7 +38,7 @@ export default function AdminDriverDetailPage() {
 
   async function handleApprove() {
     setProcessing(true);
-    const { error } = await supabase.from("drivers").update({ approval_status: "approved", rejection_reason: null }).eq("id", driverId);
+    const { error } = await (supabase.from("drivers") as any).update({ approval_status: "approved", rejection_reason: null }).eq("id", driverId);
     setProcessing(false);
     if (error) toast.error("मंजूर करता आले नाही");
     else { toast.success("ड्रायव्हर मंजूर केला"); load(); }
@@ -52,7 +47,7 @@ export default function AdminDriverDetailPage() {
   async function handleReject() {
     if (!rejectReason.trim()) { toast.error("कारण लिहा"); return; }
     setProcessing(true);
-    const { error } = await supabase.from("drivers").update({ approval_status: "rejected", rejection_reason: rejectReason }).eq("id", driverId);
+    const { error } = await (supabase.from("drivers") as any).update({ approval_status: "rejected", rejection_reason: rejectReason }).eq("id", driverId);
     setProcessing(false);
     if (error) toast.error("नाकारता आले नाही");
     else { toast.success("नाकारले"); setShowRejectBox(false); load(); }
@@ -103,7 +98,7 @@ export default function AdminDriverDetailPage() {
             <p className="text-sm text-gray-400">कोणतेही काम नाही</p>
           ) : (
             <div className="flex flex-col gap-2">
-              {jobs.map((j) => (
+              {jobs.map((j: any) => (
                 <div key={j.id} className="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2 text-sm">
                   <span>{j.booking_number} · {formatDateMarathi(j.booking_date)}</span>
                   <span className="font-semibold">{formatCurrency(j.final_amount)}</span>
