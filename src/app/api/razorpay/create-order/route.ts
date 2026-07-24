@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getRazorpayInstance } from "@/lib/razorpay";
-import type { Booking, FarmerSubscription } from "@/types/database";
 
 /**
  * Creates a Razorpay order. The amount is NEVER trusted from the client —
@@ -35,34 +34,32 @@ export async function POST(req: NextRequest) {
       .select("id, final_amount, farmer_id, booking_number, payment_status")
       .eq("id", id)
       .eq("farmer_id", user.id)
-      .single()
-      .returns<Pick<Booking, "id" | "final_amount" | "farmer_id" | "booking_number" | "payment_status">>();
+      .single();
 
     if (error || !booking) {
       return NextResponse.json({ error: "बुकिंग सापडली नाही" }, { status: 404 });
     }
-    if (booking.payment_status === "success") {
+    if ((booking as any).payment_status === "success") {
       return NextResponse.json({ error: "आधीच पेमेंट झाले आहे" }, { status: 400 });
     }
-    amount = booking.final_amount;
-    receipt = booking.booking_number;
+    amount = (booking as any).final_amount;
+    receipt = (booking as any).booking_number;
   } else {
     const { data: subscription, error } = await supabase
       .from("farmer_subscriptions")
       .select("id, amount, farmer_id, is_active")
       .eq("id", id)
       .eq("farmer_id", user.id)
-      .single()
-      .returns<Pick<FarmerSubscription, "id" | "amount" | "farmer_id" | "is_active">>();
+      .single();
 
     if (error || !subscription) {
       return NextResponse.json({ error: "Subscription सापडले नाही" }, { status: 404 });
     }
-    if (subscription.is_active) {
+    if ((subscription as any).is_active) {
       return NextResponse.json({ error: "आधीच सक्रिय आहे" }, { status: 400 });
     }
-    amount = subscription.amount;
-    receipt = `SUB-${subscription.id.slice(0, 8)}`;
+    amount = (subscription as any).amount;
+    receipt = `SUB-${(subscription as any).id.slice(0, 8)}`;
   }
 
   try {
@@ -80,7 +77,7 @@ export async function POST(req: NextRequest) {
       booking_id: type === "booking" ? id : null,
       subscription_id: type === "subscription" ? id : null,
       amount,
-      method: "upi", // updated to actual method after verification
+      method: "upi",
       status: "pending",
       razorpay_order_id: order.id,
     });
