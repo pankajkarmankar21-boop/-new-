@@ -9,8 +9,6 @@ import autoTable from "jspdf-autotable";
 import { createClient } from "@/lib/supabase/client";
 import { formatCurrency } from "@/lib/utils";
 import { AdminBottomNav } from "@/components/AdminBottomNav";
-import type { Farmer, Driver, Farm } from "@/types/database";
-import type { AnalyticsBookingItemRow } from "@/types/joined";
 
 interface JsPDFWithAutoTable extends jsPDF {
   lastAutoTable: { finalY: number };
@@ -31,31 +29,26 @@ export default function AdminAnalyticsPage() {
     async function load() {
       setLoading(true);
 
-      const farmersPromise = supabase.from("farmers").select("village").returns<Pick<Farmer, "village">[]>();
-      const driversPromise = supabase.from("drivers").select("village").returns<Pick<Driver, "village">[]>();
-      const farmsPromise = supabase.from("farms").select("village, area_acre").returns<Pick<Farm, "village" | "area_acre">[]>();
-      const itemsPromise = supabase
+      const farmersRes = await supabase.from("farmers").select("village");
+      const driversRes = await supabase.from("drivers").select("village");
+      const farmsRes = await supabase.from("farms").select("village, area_acre");
+      const itemsRes = await supabase
         .from("booking_items")
         .select("final_amount, services(name), farms(village), bookings!inner(payment_status)")
-        .eq("bookings.payment_status", "success")
-        .returns<AnalyticsBookingItemRow[]>();
-
-      const farmersRes = await farmersPromise;
-      const driversRes = await driversPromise;
-      const farmsRes = await farmsPromise;
-      const itemsRes = await itemsPromise;
+        .eq("bookings.payment_status", "success");
 
       const villageMap: Record<string, VillageStat> = {};
       const ensureVillage = (v: string) => {
         if (!villageMap[v]) villageMap[v] = { village: v, farmers: 0, drivers: 0, totalAcre: 0, revenue: 0 };
         return villageMap[v];
       };
+
       (farmersRes.data || []).forEach((f: any) => { ensureVillage(f.village).farmers++; });
-(driversRes.data || []).forEach((d: any) => { ensureVillage(d.village).drivers++; });
-(farmsRes.data || []).forEach((f: any) => { ensureVillage(f.village).totalAcre += Number(f.area_acre); });
+      (driversRes.data || []).forEach((d: any) => { ensureVillage(d.village).drivers++; });
+      (farmsRes.data || []).forEach((f: any) => { ensureVillage(f.village).totalAcre += Number(f.area_acre); });
 
       const serviceMap: Record<string, ServiceStat> = {};
-      (itemsRes.data || []).forEach((item) => {
+      (itemsRes.data || []).forEach((item: any) => {
         const village = item.farms?.village;
         if (village) ensureVillage(village).revenue += Number(item.final_amount);
 
