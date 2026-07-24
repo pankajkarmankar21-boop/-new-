@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getRazorpayInstance } from "@/lib/razorpay";
+import type { Booking, FarmerSubscription } from "@/types/database";
 
+/**
+ * Creates a Razorpay order. The amount is NEVER trusted from the client —
+ * it is always re-fetched from the database (bookings.final_amount or
+ * farmer_subscriptions.amount) using the authenticated user's own row,
+ * which RLS guarantees belongs to them.
+ */
 export async function POST(req: NextRequest) {
   const supabase = createClient();
   const {
@@ -28,49 +35,52 @@ export async function POST(req: NextRequest) {
       .select("id, final_amount, farmer_id, booking_number, payment_status")
       .eq("id", id)
       .eq("farmer_id", user.id)
-      .single();
+      .single()
+      .returns<Pick<Booking, "id" | "final_amount" | "farmer_id" | "booking_number" | "payment_status">>();
 
     if (error || !booking) {
       return NextResponse.json({ error: "बुकिंग सापडली नाही" }, { status: 404 });
     }
-    if ((booking as any).payment_status === "success") {
+    if (booking.payment_status === "success") {
       return NextResponse.json({ error: "आधीच पेमेंट झाले आहे" }, { status: 400 });
     }
-    amount = (booking as any).final_amount;
-    receipt = (booking as any).booking_number;
+    amount = booking.final_amount;
+    receipt = booking.booking_number;
   } else {
     const { data: subscription, error } = await supabase
       .from("farmer_subscriptions")
       .select("id, amount, farmer_id, is_active")
       .eq("id", id)
       .eq("farmer_id", user.id)
-      .single();
+      .single()
+      .returns<Pick<FarmerSubscription, "id" | "amount" | "farmer_id" | "is_active">>();
 
     if (error || !subscription) {
       return NextResponse.json({ error: "Subscription सापडले नाही" }, { status: 404 });
     }
-    if ((subscription as any).is_active) {
+    if (subscription.is_active) {
       return NextResponse.json({ error: "आधीच सक्रिय आहे" }, { status: 400 });
     }
-    amount = (subscription as any).amount;
-    receipt = `SUB-${(subscription as any).id.slice(0, 8)}`;
+    amount = subscription.amount;
+    receipt = `SUB-${subscription.id.slice(0, 8)}`;
   }
 
   try {
     const razorpay = getRazorpayInstance();
     const order = await razorpay.orders.create({
-      amount: Math.round(amount * 100),
+      amount: Math.round(amount * 100), // paise
       currency: "INR",
       receipt,
       notes: { type, referenceId: id, farmerId: user.id },
     });
 
-    await (supabase.from("payments") as any).insert({
+    // Create a pending payment row to track this attempt
+    await supabase.from("payments").insert({
       farmer_id: user.id,
       booking_id: type === "booking" ? id : null,
       subscription_id: type === "subscription" ? id : null,
       amount,
-      method: "upi",
+      method: "upi", // updated to actual method after verification
       status: "pending",
       razorpay_order_id: order.id,
     });
