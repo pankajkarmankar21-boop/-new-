@@ -23,20 +23,41 @@ export default function DriverProfilePage() {
     async function load() {
       const { data: userData } = await supabase.auth.getUser();
       const user = userData.user;
-      if (!user) return;
-      const { data } = await supabase.from("drivers").select("*").eq("id", user.id).single().returns<Driver>();
+      if (!user) {
+        router.push("/driver/login");
+        return;
+      }
+      
+      // FIXED: Added proper error handling and null checks
+      const { data, error } = await supabase
+        .from("drivers")
+        .select("*")
+        .eq("id", user.id)
+        .single()
+        .returns<Driver>();
+      
+      if (error) {
+        console.error("Error loading driver:", error);
+        setLoading(false);
+        return;
+      }
+      
+      // FIXED: Added null checks with optional chaining
       setDriver(data);
       setAddress(data?.address || "");
       setVillage(data?.village || "");
       setLoading(false);
     }
     load();
-  }, [supabase]);
+  }, [supabase, router]);
 
   async function handleSave() {
     if (!driver) return;
     setSaving(true);
-    const { error } = await supabase.from("drivers").update({ address, village }).eq("id", driver.id);
+    const { error } = await supabase
+      .from("drivers")
+      .update({ address, village })
+      .eq("id", driver.id);
     setSaving(false);
     if (error) {
       toast.error("जतन करता आले नाही");
@@ -60,19 +81,19 @@ export default function DriverProfilePage() {
     );
   }
 
-  const approvalLabel = { pending: "मंजुरीच्या प्रतीक्षेत", approved: "मंजूर", rejected: "नाकारले" }[driver.approval_status];
-  const approvalColor = { pending: "bg-amber-100 text-amber-700", approved: "bg-emerald-100 text-emerald-700", rejected: "bg-red-100 text-red-700" }[driver.approval_status];
+  const approvalLabel = { pending: "मंजुरीच्या प्रतीक्षेत", approved: "मंजूर", rejected: "नाकारले" }[driver.approval_status] || "प्रलंबित";
+  const approvalColor = { pending: "bg-amber-100 text-amber-700", approved: "bg-emerald-100 text-emerald-700", rejected: "bg-red-100 text-red-700" }[driver.approval_status] || "bg-gray-100 text-gray-700";
 
   return (
     <main className="min-h-screen bg-gray-50 pb-24">
       <div className="bg-gradient-to-br from-earth-600 to-amber-600 px-5 pb-8 pt-6">
         <div className="flex items-center gap-4">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/20 text-2xl font-bold text-white backdrop-blur">
-            {driver.full_name?.[0]}
+            {driver.full_name?.[0] || "D"}
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white">{driver.full_name}</h1>
-            <p className="text-sm text-white/80">{driver.mobile_number}</p>
+            <h1 className="text-xl font-bold text-white">{driver.full_name || "ड्रायव्हर"}</h1>
+            <p className="text-sm text-white/80">{driver.mobile_number || ""}</p>
           </div>
         </div>
       </div>
@@ -81,7 +102,7 @@ export default function DriverProfilePage() {
         <div className="mb-4 flex gap-3">
           <div className="glass-card flex-1 p-4 text-center">
             <Star className="mx-auto mb-1 h-5 w-5 text-amber-500" />
-            <p className="text-lg font-extrabold text-gray-900">{driver.rating}</p>
+            <p className="text-lg font-extrabold text-gray-900">{driver.rating || "0"}</p>
             <p className="text-xs text-gray-500">रेटिंग</p>
           </div>
           <span className={`glass-card flex flex-1 flex-col items-center justify-center p-4 text-center text-xs font-bold ${approvalColor} !bg-transparent`}>
@@ -105,14 +126,28 @@ export default function DriverProfilePage() {
           {editing ? (
             <>
               <label className="mb-1 block text-xs font-medium text-gray-500">पत्ता</label>
-              <input value={address} onChange={(e) => setAddress(e.target.value)} className="input-field mb-3 py-2.5 text-sm" />
+              <input 
+                value={address} 
+                onChange={(e) => setAddress(e.target.value)} 
+                className="input-field mb-3 py-2.5 text-sm" 
+                placeholder="तुमचा पत्ता"
+              />
               <label className="mb-1 block text-xs font-medium text-gray-500">गाव</label>
-              <input value={village} onChange={(e) => setVillage(e.target.value)} className="input-field py-2.5 text-sm" />
+              <input 
+                value={village} 
+                onChange={(e) => setVillage(e.target.value)} 
+                className="input-field py-2.5 text-sm" 
+                placeholder="तुमचे गाव"
+              />
             </>
           ) : (
             <>
-              <p className="mb-1 text-sm text-gray-700"><span className="text-gray-400">पत्ता:</span> {driver.address}</p>
-              <p className="text-sm text-gray-700"><span className="text-gray-400">गाव:</span> {driver.village}</p>
+              <p className="mb-1 text-sm text-gray-700">
+                <span className="text-gray-400">पत्ता:</span> {driver.address || "अपडेट केलेला नाही"}
+              </p>
+              <p className="text-sm text-gray-700">
+                <span className="text-gray-400">गाव:</span> {driver.village || "अपडेट केलेला नाही"}
+              </p>
             </>
           )}
         </div>
@@ -121,7 +156,9 @@ export default function DriverProfilePage() {
           <h2 className="mb-3 flex items-center gap-1.5 text-sm font-bold text-gray-700">
             <Tractor className="h-4 w-4" /> ट्रॅक्टर तपशील
           </h2>
-          <p className="text-sm text-gray-700">{driver.tractor_brand} · {driver.tractor_company}</p>
+          <p className="text-sm text-gray-700">
+            {driver.tractor_brand || "नाही"} · {driver.tractor_company || "नाही"}
+          </p>
         </div>
 
         <button onClick={handleLogout} className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-red-200 bg-red-50 py-3.5 text-sm font-bold text-red-600">
